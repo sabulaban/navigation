@@ -13226,6 +13226,95 @@ Unity brain name: BananaBrain
 </div>
 
 </div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Learning-Algorithms-Used:">Learning Algorithms Used:<a class="anchor-link" href="#Learning-Algorithms-Used:">&#182;</a></h3><p>The project covered 4 different algorithms, namely:</p>
+<ul>
+<li>DQN</li>
+<li>Duel DQN</li>
+<li>Duel DDQN</li>
+<li>Duel DDQN with Priorerized Experience Replacy</li>
+</ul>
+<h4 id="DQN:">DQN:<a class="anchor-link" href="#DQN:">&#182;</a></h4><p>The algorithm is based on SARSA MAX and follows the following sequence:</p>
+<ol>
+<li>The agent is initialized with 2 models, local agent (learning agent) and target agent (agent that is updated softly every n steps (n is a hyper parameter chosen to be 4), soft update happens by copying the weights of the local agent factored by a hyper parameter TAU (chosen to be 1e-3)</li>
+<li>the learning algorithm starts by the local agent in an initial state, taking an action based on an epsilon greedy algorithm, with epsilon starting from 1, fading to 0 over time (episodes). The update for epsilon is chosen to be 0.995 at every episode; epsilon decay is a hypermarameter named as eps_decay.</li>
+<li>Once the action is chosen, the agent takes a step based on the action, and observe the next state, reward, and if the episode ended or no.</li>
+<li>The transition is stored in an experience replay buffer</li>
+<li>Every n transitions (n is a hyper parameter chosen to be 4) the local agent trains through the following process:
+ a. Randomly sample a batch (batch size is a hyper parameter) of experiences from the experience replay buffer
+ b. Get Q_t+1 by using the next stats from the random batch against the target agent; Q_t+1 = 0 if t+1 is terminal state
+ c. Calculate Q_target using Q_target = reward + gamma * max(Q_t+1) (Gamma is a hyper parameter chosen to be 0.99
+ d. Q_expected is estimated using the pyTorch model defined (QNetwork class)
+ e. Minimize MSE between Q_expected and Q_target with a learning rate of 5e-4 (learning rate is another hyper parameter)
+ f. Do a soft update for target agent using local agent with a factor of TAU</li>
+</ol>
+<p>The above process is repeated every step, for 1800 episodes. To avoid the agent being stuck in a loop between actions, a hyper parameter max_t is added (value of 1000) where if an agent exceeds max_t in an episode the episode ends.</p>
+<p>The model used is based on</p>
+<ul>
+<li>Input layer with dimensions (state size, 64)</li>
+<li>FC layer with with dimensions (64, 64)</li>
+<li>Output layer with dimensions (64, number of actions) </li>
+</ul>
+<p>The logic behind choosing such network, is the simplicity of the state and action spaces, state space is of size 13, and action space is of size 4, a bigger netowrk in terms of number of nodes and/or number of layers increases the complexity of the model, thus impacting the learning time of the model. Another motivation to go for simpler network is <a href="https://arxiv.org/pdf/1707.05110.pdf">https://arxiv.org/pdf/1707.05110.pdf</a> where is it observed that single architecture neural networks can cope with multiple problems with the same structure.</p>
+<p>Vanilla DQN implementation provided good performance for the given problem on the short term; performance comparison is highlighted in workspace/agents.comparison.ipynb, on the long term (1800 episodes) it was outperformed by other algorithms.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Duel-DQN">Duel DQN<a class="anchor-link" href="#Duel-DQN">&#182;</a></h3><p>The same algorithm methodology was used as the vanilla DQN with one major difference in the model used.
+The model followed the recommendation by <a href="https://arxiv.org/pdf/1511.06581.pdf">https://arxiv.org/pdf/1511.06581.pdf</a> with the hope of improving the learning speed of the agent.
+The model created is based on:</p>
+<ul>
+<li>Input layer with dimensions (state size, 64)</li>
+<li>Advantage FC layer with with dimensions (64, 64)</li>
+<li>Value FC layer with with dimensions (64, 64)</li>
+<li>Advantage Output layer with with dimensions (64, number of actions)</li>
+<li>Value Output layer with with dimensions (64, 1)</li>
+</ul>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Duel-DDQN">Duel DDQN<a class="anchor-link" href="#Duel-DDQN">&#182;</a></h3><p>This agent follows the same model as the Duel DQN agent, however the change is during the learning phase, where Q_next is not estimated to be max(Q_next), however, A_next is calculated based on the local agent epsilon/greedy policy, and Q_next value is selected based on A_next.
+The improvement is based on <a href="https://arxiv.org/pdf/1509.06461.pdf">https://arxiv.org/pdf/1509.06461.pdf</a> with a motivation to reduce overoptimism and improve the learning on the long term, the comparison results (workspace/agents.comparison.ipynb) showed that the agent on the long term outperformed vanilla DQN, and even in playing mode, the agent outperformed Duel DQN and vanilla DQN</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Duel-DDQN-with-PER">Duel DDQN with PER<a class="anchor-link" href="#Duel-DDQN-with-PER">&#182;</a></h3><p><u>This notebook shows the training performance of Duel DDQN with PER.</u>
+Duel DDQN with PER follows the same model and learning process as Duel DDQN, with one difference being the experience replay.</p>
+<p>The implementation is motivated by <a href="https://arxiv.org/pdf/1511.05952.pdf">https://arxiv.org/pdf/1511.05952.pdf</a>, with an objective of improving the learning by avoiding 'premature convergence' however providing better ultimate results; <a href="https://arxiv.org/pdf/1511.05952.pdf">https://arxiv.org/pdf/1511.05952.pdf</a>, this is clearly observed in workspace/agents.comparison.ipynb where the agent was the 3rd agent to reach the target value, hoever on the long term, the agent showed the best performance.</p>
+<p>The difference in the learning process is by introducing priority based sampling, where at every step, the agent adds the experience with a priority of max priority in the buffer; to guarantee that the new experience is sampled. At every learning step, the buffer is sampled based on a probability, where the probability of every experience is defined as the td error + a small value to avoid computational errors; small value epsilon is set to 0.00001; the td error term is raised to the power of hyper parameter alpha which defines how much random sampling is done; alpha is chosen to be -0.5; where a value of 0 would mean random sampling, that term is devided by the sum of td errors raised to the power of alpha for the buffer.</p>
+<p>Once sampling is performed, the new td errors are calculated, and the probabilities of the buffer are updated.</p>
+<p>To avoid the bias of the prioretized sampling, a weight is introduced which is defined as the p of sample multiplied by buffer size, raised to the power of <strong>-beta</strong>, where beta increases over time; steps, starting from value of 0 (uniform sampling) to 1 (total prioretized sampling)</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Variations-implemented-from-research">Variations implemented from research<a class="anchor-link" href="#Variations-implemented-from-research">&#182;</a></h3><p>The following section describes the changes I encorprated in my work from the research papers discussed above:</p>
+<ol>
+<li>The use of Dueling DDQN for the agent vs using DDQN by <a href="https://arxiv.org/pdf/1511.05952.pdf">https://arxiv.org/pdf/1511.05952.pdf</a></li>
+<li>Using a decaying epsilon for the epsilon greedy policy vs using static epsilon</li>
+<li>Epsilon value used for the epsilon greedy policy during the learning step matches the epsilon value used to take the action during for the state transition, objective is, to use the same policy distribution for learning as per the current step taken during state transition.</li>
+</ol>
+
+</div>
+</div>
+</div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
 <div class="prompt input_prompt">In&nbsp;[6]:</div>
@@ -13405,6 +13494,20 @@ Episode 1800	Average Score: 16.50
 </div>
 </div>
 
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Discussion">Discussion<a class="anchor-link" href="#Discussion">&#182;</a></h3><p>Despite the improvement the agent brings, there is a major drawback in the implementation, where the PER requires:</p>
+<ol>
+<li>Sampling based on probabilities</li>
+<li>Calculate td error for sampled batch</li>
+<li><u>Update the whole buffer probabilities based on the new updated batch</u></li>
+</ol>
+<p>The last step is computationally expensive, and caused the training time (in terms of processing time) to be significantly high, future work should include a mechanism to update the probabilities with less computational time.</p>
+
+</div>
+</div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
